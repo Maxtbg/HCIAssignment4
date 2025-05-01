@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Backpack AR View</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    /* kleiner Hinweis-Screen */
+    .overlay{
+      display:flex;align-items:center;justify-content:center;
+      height:100dvh;text-align:center;font-family:-apple-system,Helvetica;
+      color:#333;padding:2rem;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="overlay" id="msg">Loading AR viewer…</div>
+
+  <script>
+    /* holt ?model=backpack_xyz aus der URL */
+    const params = new URLSearchParams(location.search);
+    const model = params.get('model') || 'backpack_ludwig'; // Fallback
+
+    /* baue Quick-Look-Link */
+    const link = document.createElement('a');
+    link.setAttribute('rel','ar');
+    link.setAttribute('href',`assets/${model}.usdz`);
+    document.body.appendChild(link);
+
+    /* automatischer Klick (iOS öffnet Quick Look) */
+    setTimeout(()=>{ link.click(); }, 400);
+
+    /* Falls Nutzer zurückkehrt, Hinweis anpassen */
+    link.addEventListener('click',()=>{
+      document.getElementById('msg').innerText =
+        'If the AR viewer did not open, tap ALLOW or use Safari on iOS 13 +.';
+    });
+  </script>
+</body>
+</html>

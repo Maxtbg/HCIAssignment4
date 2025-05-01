@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Trip</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+body{margin:0;font-family:-apple-system,Helvetica}
+.topBar{display:flex;align-items:center;padding:1rem;border-bottom:1px solid #e4e4e4;gap:.6rem}
+.topBar a{font-size:1.4rem;color:#007aff;text-decoration:none}
+.title{flex:1;font-weight:700;font-size:1.1rem}
+.trash{font-size:1.3rem;color:#e33;cursor:pointer}
+.gallery{padding:1rem;display:flex;flex-direction:column;gap:1rem}
+.frame{position:relative}
+.frame img{width:100%;border-radius:.6rem;object-fit:cover}
+.delBtn{position:absolute;top:.4rem;right:.4rem;width:26px;height:26px;border:none;border-radius:50%;
+        background:rgba(0,0,0,.55);color:#fff;font-weight:600;cursor:pointer}
+.addPhoto{position:fixed;right:1rem;bottom:1rem;padding:.75rem 1.4rem;border:none;border-radius:1.6rem;
+          font-weight:600;background:#007aff;color:#fff}
+</style>
+</head>
+<body>
+
+<div class="topBar">
+  <a href="memories.html">‹</a>
+  <div class="title" id="tripTitle">Trip</div>
+  <span class="trash" onclick="deleteTrip()">🗑️</span>
+</div>
+
+<div id="gallery" class="gallery"></div>
+<button class="addPhoto" onclick="pickPhoto()">Add photo</button>
+
+<script>
+/* ---------- Konstanten & Metadaten -------------------------------- */
+const KEY='trips', PLACE='assets/placeholder.jpg';
+const id=new URLSearchParams(location.search).get('id');
+const trips=JSON.parse(localStorage.getItem(KEY)||'[]');
+const trip=trips.find(t=>t.id===id);
+if(!trip){ alert('Trip not found'); location='memories.html'; }
+
+document.getElementById('tripTitle').textContent=trip.title;
+
+/* ---------- IndexedDB Promise-API -------------------------------- */
+const dbReady = new Promise((res, rej) => {
+  try {
+    console.log("Opening IndexedDB...");
+    const r = indexedDB.open('tripPhotos', 1);
+    
+    r.onupgradeneeded = (e) => {
+      console.log("Database upgrade needed, creating object store");
+      try {
+        e.target.result.createObjectStore('photos');
+      } catch (err) {
+        console.error("Error creating object store:", err);
+      }
+    };
+    
+    r.onsuccess = () => {
+      console.log("IndexedDB opened successfully");
+      res(r.result);
+    };
+    
+    r.onerror = (e) => {
+      console.error("Error opening IndexedDB:", e);
+      alert("Could not open photo storage. Your browser may be in private mode or low on storage.");
+      rej(e);
+    };
+    
+    r.onblocked = (e) => {
+      console.error("IndexedDB blocked:", e);
+      alert("Photo storage is blocked. Please close other tabs of this site.");
+      rej(e);
+    };
+  } catch (e) {
+    console.error("Exception during IndexedDB open:", e);
+    alert("Failed to open photo storage: " + (e.message || "Unknown error"));
+    rej(e);
+  }
+});
+const putBlob = (k,b)=> dbReady.then(db=> new Promise((r, reject)=>{
+  try {
+    console.log(`Putting blob with key: ${k}, size: ${b.size} bytes`);
+    
+    // Create a transaction that can handle the request timing out
+    const tx = db.transaction('photos','readwrite');
+    
+    // Set transaction timeout
+    setTimeout(() => {
+      try {
+        if (tx.state && tx.state === 'active') {
+          console.warn("Transaction taking too long, may have stalled");
+        }
+      } catch (e) {
+        // Ignore errors checking transaction state
+      }
+    }, 5000);
+    
+    // Create a request to store the blob
+    const store = tx.objectStore('photos');
+    const req = store.put(b, k);
+    
+    req.onsuccess = (event) => {
+      console.log("Put request successful");
+      r();
+    };
+    
+    req.onerror = (event) => {
+      console.error("Put request error:", event.target.error);
+      reject(new Error("Failed to store image: " + (event.target.error?.message || "Unknown database error")));
+    };
+    
+    tx.oncomplete = (event) => {
+      console.log("Transaction completed successfully");
+      r();
+    };
+    
+    tx.onerror = (event) => {
+      console.error("Transaction error:", event.target.error);
+      reject(new Error("Transaction failed: " + (event.target.error?.message || "Unknown transaction error")));
+    };
+    
+    tx.onabort = (event) => {
+      console.error("Transaction aborted:", event.target.error);
+      reject(new Error("Transaction aborted: " + (event.target.error?.message || "Transaction was aborted")));
+    };
+    
+  } catch(e) {
+    console.error("Exception in putBlob:", e);
+    reject(new Error("Failed to store image: " + (e.message || "Unknown error")));
+  }
+}));
+const delBlob = k => dbReady.then(db=> new Promise(r=>{
+  const tx = db.transaction('photos','readwrite');
+  tx.objectStore('photos').delete(k);
+  tx.oncomplete = () => r();
+}));
+const getBlob = k => dbReady.then(db=> new Promise(r=>{
+  const req = db.transaction('photos').objectStore('photos').get(k);
+  req.onsuccess = e => r(e.target.result);
+  req.onerror = () => {
+    console.error("Error getting blob:", k);
+    r(null);
+  };
+}));
+
+/* ---------- Galerie rendern -------------------------------------- */
+async function render(){
+  console.log("Rendering gallery with", trip.images ? trip.images.length : 0, "images");
+  const g = document.getElementById('gallery'); 
+  g.innerHTML = '';
+  
+  if(!trip.images || !trip.images.length){ 
+    g.innerHTML = '<p style="text-align:center;padding:2rem">No photos yet.</p>'; 
+    return; 
+  }
+  
+  // Add loading indicator
+  const loadingMsg = document.createElement('div');
+  loadingMsg.textContent = 'Loading images...';
+  loadingMsg.style.padding = '1rem';
+  loadingMsg.style.textAlign = 'center';
+  g.appendChild(loadingMsg);
+  
+  // Use a small delay to let the loading message render
+  await new Promise(r => setTimeout(r, 10));
+  
+  // Create a document fragment for better performance
+  const fragment = document.createDocumentFragment();
+  
+  // Keep track of created object URLs to revoke later
+  const objectURLs = [];
+  
+  // First pass: create all frames
+  for(const k of trip.images){
+    console.log("Creating frame for image:", k);
+    const frame = document.createElement('div');
+    frame.className = 'frame';
+    frame.dataset.key = k; // Store key as data attribute
+    frame.innerHTML = `
+      <img src="${PLACE}" alt="Loading..." style="min-height:150px;">
+      <button class="delBtn" onclick="deletePhoto('${k}',event)">×</button>
+    `;
+    fragment.appendChild(frame);
+  }
+  
+  // Add all frames to the DOM at once
+  g.innerHTML = '';
+  g.appendChild(fragment);
+  
+  // Second pass: load images async
+  for(const k of trip.images){
+    const frame = g.querySelector(`.frame[data-key="${k}"]`);
+    if (!frame) continue;
+    
+    const img = frame.querySelector('img');
+    if (!img) continue;
+    
+    console.log("Loading image content:", k);
+    try {
+      const blob = await getBlob(k);
+      
+      if (!blob) {
+        console.warn("No blob found for key:", k);
+        img.src = PLACE;
+        img.alt = "Missing image";
+        continue;
+      }
+      
+      const url = URL.createObjectURL(blob);
+      objectURLs.push(url);
+      
+      img.onload = function() {
+        img.style.minHeight = '';
+      };
+      
+      img.onerror = function() {
+        console.error("Image failed to load from blob:", k);
+        img.src = PLACE;
+        img.alt = "Error loading";
+      };
+      
+      img.src = url;
+      img.alt = "Trip photo";
+      
+    } catch (err) {
+      console.error("Error rendering image:", k, err);
+      img.src = PLACE;
+      img.alt = "Error loading";
+    }
+  }
+  
+  // Clean up object URLs when navigating away
+  window.addEventListener('beforeunload', function() {
+    objectURLs.forEach(url => URL.revokeObjectURL(url));
+  }, { once: true });
+}
+
+/* ---------- HEIC-sicherer Upload ---------------------------------- */
+function pickPhoto(){
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = 'image/*';
+  
+  // Limit to a few images at a time on mobile
+  inp.multiple = true;
+  
+  inp.onchange = async e => {
+    if (!e.target.files || !e.target.files.length) {
+      console.log("No files selected");
+      return;
+    }
+    
+    // Convert FileList to Array, but limit to 5 at a time on mobile for safety
+    const files = [...e.target.files].slice(0, 10);
+    console.log("Selected files:", files.length);
+    
+    // Show loading indicator
+    const gallery = document.getElementById('gallery');
+    const loadingMsg = document.createElement('div');
+    loadingMsg.textContent = 'Processing images...';
+    loadingMsg.style.padding = '1rem';
+    loadingMsg.style.textAlign = 'center';
+    loadingMsg.style.backgroundColor = '#f0f0f0';
+    loadingMsg.style.marginBottom = '1rem';
+    loadingMsg.style.borderRadius = '0.5rem';
+    
+    if (gallery.firstChild) {
+      gallery.insertBefore(loadingMsg, gallery.firstChild);
+    } else {
+      gallery.appendChild(loadingMsg);
+    }
+    
+    // Process one file at a time to avoid memory issues on mobile
+    for(let i = 0; i < files.length; i++) {
+      const f = files[i];
+      try {
+        loadingMsg.textContent = `Processing image ${i+1} of ${files.length}...`;
+        
+        const key = `${trip.id}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        console.log(`Processing image ${i+1}/${files.length} with key:`, key);
+        
+        // Try with direct file first, then convert if needed
+        try {
+          console.log(`Storing image directly: ${f.name} (${f.size} bytes)`);
+          await putBlob(key, f);
+          console.log("Direct storage successful");
+        } catch (directErr) {
+          console.warn("Direct storage failed, trying conversion:", directErr);
+          
+          // Convert to safe format as fallback
+          loadingMsg.textContent = `Converting image ${i+1} of ${files.length}...`;
+          const safeBlob = await fileToSafeBlob(f);
+          
+          loadingMsg.textContent = `Storing image ${i+1} of ${files.length}...`;
+          await putBlob(key, safeBlob);
+          console.log("Storage after conversion successful");
+        }
+        
+        trip.images.push(key);
+
+        if(!trip.cover && (trip.images.length === 1 ||
+           (i === 0 && confirm('Use first photo as cover?')))) {
+          trip.cover = key;
+          console.log("Set as cover image:", key);
+        }
+        
+        // Save after each successful image in case of later failures
+        localStorage.setItem(KEY, JSON.stringify(trips));
+        
+      } catch (err) {
+        console.error("Error adding photo:", err);
+        alert(`Failed to add photo ${i+1}: ${err.message || "Unknown error"}`);
+      }
+    }
+    
+    console.log("All images processed");
+    localStorage.setItem(KEY, JSON.stringify(trips));
+    
+    loadingMsg.textContent = "Loading gallery...";
+    render().then(() => {
+      loadingMsg.remove();
+    }).catch(err => {
+      console.error("Error rendering gallery:", err);
+      loadingMsg.textContent = "Error loading gallery";
+      setTimeout(() => loadingMsg.remove(), 2000);
+    });
+  };
+  
+  inp.click();
+}
+
+// Convert file to safe JPEG format for iOS
+function fileToSafeBlob(file, quality = 0.8) {
+  return new Promise((resolve, reject) => {
+    // First try using the file directly for non-HEIC files
+    // This is more reliable for most file types
+    if (!file.name.toLowerCase().includes('heic')) {
+      try {
+        // On iOS, we'll use smaller file to avoid memory issues
+        if (file.size > 5 * 1024 * 1024) {
+          console.log("Large file detected, will resize:", file.name, file.size);
+        } else {
+          console.log("Using file directly:", file.name, file.size);
+          return resolve(file);
+        }
+      } catch (err) {
+        console.warn("Error checking file type, will convert:", err);
+      }
+    }
+    
+    console.log("Converting image to safe format...");
+    
+    // For HEIC or large files, convert to JPEG
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+      const img = new Image();
+      
+      img.onload = function() {
+        try {
+          // Create canvas
+          const canvas = document.createElement('canvas');
+          
+          // Handle large images by scaling them down
+          const MAX_SIZE = 1200; // max dimension for iOS
+          let width = img.width;
+          let height = img.height;
+          
+          if (width > MAX_SIZE || height > MAX_SIZE) {
+            if (width > height) {
+              height = Math.round(height * (MAX_SIZE / width));
+              width = MAX_SIZE;
+            } else {
+              width = Math.round(width * (MAX_SIZE / height));
+              height = MAX_SIZE;
+            }
+            console.log(`Resizing image to ${width}x${height}`);
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          // Draw and convert to blob
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // For iOS compatibility, use toBlob instead of toDataURL when possible
+          if (canvas.toBlob) {
+            canvas.toBlob(blob => {
+              console.log("Converted to blob:", blob.size);
+              resolve(blob);
+            }, 'image/jpeg', quality);
+          } else {
+            // Fallback for older browsers
+            console.log("Using dataURL fallback");
+            const dataUrl = canvas.toDataURL('image/jpeg', quality);
+            const byteString = atob(dataUrl.split(',')[1]);
+            const mimeString = dataUrl.split(',')[0].split(':')[1].split(';')[0];
+            const ab = new ArrayBuffer(byteString.length);
+            const ia = new Uint8Array(ab);
+            
+            for (let i = 0; i < byteString.length; i++) {
+              ia[i] = byteString.charCodeAt(i);
+            }
+            
+            const blob = new Blob([ab], {type: mimeString});
+            console.log("Converted to blob via dataURL:", blob.size);
+            resolve(blob);
+          }
+        } catch (err) {
+          console.error("Error processing image in canvas:", err);
+          // Fallback to original file on error
+          console.log("Using original file as fallback");
+          resolve(file);
+        }
+      };
+      
+      img.onerror = function(err) {
+        console.error("Failed to load image:", err);
+        // Fallback to original file
+        console.log("Using original file due to img load error");
+        resolve(file);
+      };
+      
+      img.src = e.target.result;
+    };
+    
+    reader.onerror = function(err) {
+      console.error("Failed to read file:", err);
+      // Fallback to original
+      console.log("Using original file due to reader error");
+      resolve(file);
+    };
+    
+    // Use a smaller portion of the file for initial reading
+    // This helps with memory issues on iOS
+    try {
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error("Error in readAsDataURL:", err);
+      resolve(file);
+    }
+  });
+}
+
+/* ---------- Delete Photo / Trip ----------------------------------- */
+async function deletePhoto(key, ev){
+  ev.stopPropagation();
+  if(!confirm('Delete this photo?')) return;
+  
+  try {
+    await delBlob(key);
+    trip.images = trip.images.filter(k => k !== key);
+    if(trip.cover === key) trip.cover = '';
+    localStorage.setItem(KEY, JSON.stringify(trips));
+    render();
+  } catch (err) {
+    console.error("Error deleting photo:", err);
+    alert("Failed to delete photo: " + err.message);
+  }
+}
+
+async function deleteTrip(){
+  if(!confirm('Delete entire trip?')) return;
+  
+  try {
+    await Promise.all(trip.images.map(delBlob));
+    const rest = trips.filter(t => t.id !== trip.id);
+    localStorage.setItem(KEY, JSON.stringify(rest));
+    location = 'memories.html';
+  } catch (err) {
+    console.error("Error deleting trip:", err);
+    alert("Failed to delete trip: " + err.message);
+  }
+}
+
+/* Init */
+window.addEventListener('DOMContentLoaded', () => {
+  console.log("Page loaded, rendering gallery");
+  render();
+});
+</script>
+</body></html>

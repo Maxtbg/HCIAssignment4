@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BackpackVisualizer iOS – List</title>
+  <style>
+    /* ==================================================================== */
+    /* ---------------------- BACKPACK LIST PAGE -------------------------- */
+    /* ==================================================================== */
+    
+    /* Base Styles */
+    *{
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    
+    body {
+      background: linear-gradient(180deg, #f7f7f7 0%, #ffffff 100%);
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+    }
+    
+    a, button {
+      all: unset;
+      cursor: pointer;
+    }
+    
+    .bpListPage{
+      background: linear-gradient(180deg, #f7f7f7 0%, #fafafa 20%, #ffffff 50%); /* Sanfter Hintergrundverlauf für die ganze Seite */
+      min-height: 100dvh;
+      overflow-x: hidden;
+      position: relative; /* Für korrektes Stacking */
+    }
+    
+    /* --- Header mit Farbverlauf ---------------------------------------- */
+    .bpHeader{
+      padding: 1.4rem 1.2rem 4rem;  /* mehr Padding unten für längeren Farbverlauf */
+      background: linear-gradient(180deg, #b9ebe4 0%, #cdeee8 40%, #e4f6f2 75%, #f0fbf8 90%, rgba(247, 253, 251, 0.8) 100%); /* sanfterer, mehrstufiger Farbverlauf */
+      position: relative;
+      display: flex;
+      flex-direction: column;  /* Umstellung auf Spalten-Layout */
+      align-items: center;
+      gap: .5rem;
+      color: #fff;
+      z-index: 1; /* Stellt sicher, dass der Header unter der Card liegt */
+    }
+    
+    .bpBack{
+      position: absolute;
+      top: 1.4rem;
+      left: 1rem;
+      font-size: 1.6rem;
+      color: #fff;
+      text-decoration: none;
+      z-index: 3; /* Über allem anderen */
+    }
+    
+    .bpIcon{ 
+      width: 40px;
+      height: 40px; 
+      margin-top: 0.5rem;
+    }
+    
+    .bpHeader h1{ 
+      font-size: 1.35rem;
+      font-weight: 700;
+      margin: 0;
+      line-height: 1.2;
+      text-align: center;
+    }
+    
+    .bpHeader small{ 
+      font-size: .78rem;
+      opacity: .9; 
+    }
+    
+    /* --- Status Bar iOS Style ------------------------------------------ */
+    .ios-status-bar {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.3rem 1rem;
+      background: transparent;
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: #000;
+    }
+    
+    .time {
+      flex: 1;
+    }
+    
+    .indicators {
+      display: flex;
+      gap: 0.3rem;
+    }
+    
+    /* --- Titel-Card ----------------------------------------------------- */
+    .bpCard{
+      margin: -2.2rem auto 1rem;      /* stärkere Überlappung, damit die Karte über dem Header schwebt */
+      width: 90vw;
+      max-width: 430px;
+      background: linear-gradient(180deg, #ffffff 0%, #fafafa 100%); /* leichter Verlauf innerhalb der Karte */
+      border-radius: 1rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,.06); /* stärkerer Schatten für besseren 3D-Effekt */
+      overflow: hidden;
+      position: relative;
+      z-index: 2; /* Stellt sicher, dass die Card über dem Header liegt */
+    }
+    
+    .bpCardHeader {
+      text-align: center;
+      padding: 1.1rem 1rem;
+      position: relative;
+      background: #f9fdfc;  /* leicht gefärbter Hintergrund für den Header */
+    }
+    
+    .bpCardHeader::after {
+      content: "";
+      display: block;
+      margin: 0.7rem auto 0;
+      width: 30%;
+      height: 3px;
+      background: #a3d8cd;
+      border-radius: 3px;
+    }
+    
+    .bpCard h2{
+      text-align: center;
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin: 0;
+      color: #333;
+    }
+    
+    .leaf{ 
+      font-size: 1.2rem;
+      margin: 0 .15rem;
+      color: #333;  /* dunkler für besseren Kontrast */
+    }
+    
+    /* --- Einzelne Rucksack-Zeilen -------------------------------------- */
+    .bpItem{
+      display: flex;
+      gap: .9rem;
+      padding: .9rem 1rem;
+      background: #ffffff;
+      cursor: pointer;
+      border-top: 1px solid #e5e5e5;
+    }
+    
+    .bpItem img{
+      width: 80px;
+      height: 80px;
+      border-radius: .25rem;
+      object-fit: cover;
+    }
+    
+    .bpItem strong{ 
+      font-size: 1rem;
+      color: #333;
+      display: block;
+      margin-bottom: 0.2rem;
+    }
+    
+    .bpItemContent {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    
+    .bpItemInfo {
+      font-size: .75rem;
+      color: #666;
+      margin-bottom: 0.2rem;
+    }
+    
+    .bpItemInfo .label {
+      font-weight: 600;
+    }
+    
+    /* --- Sign-out removed ------------------------------------ */
+  </style>
+</head>
+
+<body>
+  <div class="bpListPage">
+    <!-- iOS Status Bar removed -->
+    
+    <!-- Header -->
+    <header class="bpHeader">
+      <a class="bpBack" href="menu.html">〈</a>
+      <img class="bpIcon" src="assets/icon_backpack.svg" alt="">
+      <h1>BackpackVisualizer</h1>
+      <small>Visualize. Imagine. Immerse.</small>
+    </header>
+
+    <!-- Titel-Card inkl. Liste -->
+    <section class="bpCard">
+      <div class="bpCardHeader">
+        <h2>
+          <span class="leaf">🌿</span>
+          This is the list of Backpacks you can try on now!!!
+          <span class="leaf">🌿</span>
+        </h2>
+      </div>
+
+      <!-- Zeilen -->
+      <div class="bpItem" onclick="location.href='takephoto.html?model=backpack_ludwig'">
+        <img src="assets/bag_ludwig.jpg" alt="">
+        <div class="bpItemContent">
+          <strong>Backpack Ludwig</strong>
+          <div class="bpItemInfo">
+            <span class="label">Information:</span> Classic bavarian backpack
+          </div>
+          <div class="bpItemInfo">
+            <span class="label">Price:</span> 229 CHF
+          </div>
+        </div>
+      </div>
+
+      <div class="bpItem" onclick="location.href='takephoto.html?model=backpack_charles'">
+        <img src="assets/bag_charles.jpg" alt="">
+        <div class="bpItemContent">
+          <strong>Backpack Charles</strong>
+          <div class="bpItemInfo">
+            <span class="label">Information:</span> The Go-To for Hiking Starters
+          </div>
+          <div class="bpItemInfo">
+            <span class="label">Price:</span> 89 CHF
+          </div>
+        </div>
+      </div>
+
+      <div class="bpItem" onclick="location.href='takephoto.html?model=backpack_john'">
+        <img src="assets/bag_john.jpg" alt="">
+        <div class="bpItemContent">
+          <strong>Backpack John</strong>
+          <div class="bpItemInfo">
+            <span class="label">Information:</span> Advanced military backpack
+          </div>
+          <div class="bpItemInfo">
+            <span class="label">Price:</span> 300 CHF
+          </div>
+        </div>
+      </div>
+
+      <div class="bpItem" onclick="location.href='takephoto.html?model=backpack_bilbo'">
+        <img src="assets/bag_bilbo.jpg" alt="">
+        <div class="bpItemContent">
+          <strong>Backpack Bilbo</strong>
+          <div class="bpItemInfo">
+            <span class="label">Information:</span> Normal for hiking trips and similar
+          </div>
+          <div class="bpItemInfo">
+            <span class="label">Price:</span> 189 CHF
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Logout removed -->
+  </div>
+</body>
+</html>

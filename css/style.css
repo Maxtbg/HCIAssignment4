@@ -1,0 +1,266 @@
+:root{
+    --primary:#1E3354;
+    --accent:#7ad2c1;
+    --iosBlue:#007aff;
+  }
+  
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body,html{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;}
+  .page{min-height:100dvh;display:flex;flex-direction:column;align-items:center;}
+  
+  /* ---------- Login Screen ---------- */
+  #loginBody{
+    background:url('../assets/forest_bg.png') center/cover no-repeat;
+    color:#fff;
+    justify-content:center;          /* vertikal zentrieren */
+    padding:2rem;
+    text-align:center;
+  }
+  
+  .login-title{
+    font-size:2.4rem;                /* etwas kleiner & dünner */
+    font-weight:300;
+    margin-top:4vh;                  /* weiter nach oben */
+    margin-bottom:3rem;
+    text-shadow:0 2px 4px rgba(0,0,0,.4);
+  }
+  
+  /* Haupt-Button (Sign in) */
+  .btn{
+    display:inline-block;
+    min-width:260px;
+    padding:1rem 0;
+    border-radius:8px;
+    background:#fff;                 /* weiß, kein Rand */
+    color:#000;                      /* schwarzer Text */
+    font-size:1.05rem;
+    font-weight:600;
+    text-decoration:none;
+  }
+  
+  /* Kleiner Text darunter */
+  .sub{
+    margin-top:1rem;
+    font-size:.875rem;
+  }
+  
+  .sub a{
+    color:var(--iosBlue);            /* Link in iOS-Blau */
+  }
+
+  
+/* ==================================================================== */
+/* ---------------------------- GLOBAL FIX ---------------------------- */
+/* ==================================================================== */
+
+body{ margin:0; }          /* entfernt den Standard-Seitenrand */
+
+
+
+
+/* ==================================================================== */
+/* ---------------------------- MENU PAGE ----------------------------- */
+/* ==================================================================== */
+
+body{ margin:0; }
+
+#menuPage{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  align-items:center;      /* mittiges Spaltengerüst */
+  gap:1.5rem;
+  padding:1.5rem 0;        /* oben/unten 1.5 rem, links/rechts 0 */
+  background:#f5f7fa;
+  min-height:100dvh;
+  overflow-x:hidden;
+}
+
+/* ---------- Memories (runder Button) ---------- */
+
+.card-circle{
+  position:relative;
+  width:55vw;
+  max-width:330px;
+  padding-top:55vw;        /* 1:1 */
+  border-radius:50%;
+  overflow:hidden;
+  cursor:pointer;
+  box-shadow:0 0 0 2px rgba(0,0,0,.18);
+  border:none;background:none;
+}
+
+/* Memories noch weiter nach links */
+.memories-btn{ margin-left:-2vw; }
+
+/* ---------- BackpackVisualizer (Hochformat-Rechteck) ---------- */
+
+.card-square{
+  position:relative;
+  width:90vw;
+  max-width:480px;
+  padding-top:120%;
+  border-radius:2rem 0 0 2rem;   /* links rund, rechts eckig */
+  overflow:hidden;
+  cursor:pointer;
+  box-shadow:0 2px 4px rgba(0,0,0,.15);
+  border:none;background:none;
+}
+
+.bpv-btn{
+  align-self:flex-end;
+  margin-right:-10vw;      /* 10 vw Überhang rechts */
+  margin-bottom:0;
+}
+
+/* ---------- Gemeinsame Overlays ---------- */
+
+.card-circle img,
+.card-square img{ position:absolute;inset:0;width:100%;height:100%;object-fit:cover; }
+
+.card-circle span,
+.card-square span{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;
+  color:#fff;font-size:1.55rem;font-weight:600;text-shadow:0 2px 4px rgba(0,0,0,.4);pointer-events:none;
+}
+
+/* ---------- Dekor-Bubble ---------- */
+
+.decor-circle{
+  position:absolute;top:20vh;right:-9vw;width:140px;height:140px;border-radius:50%;
+  background:radial-gradient(rgba(122,210,193,.8) 0%,rgba(122,210,193,.25) 55%,rgba(122,210,193,0) 100%);
+  filter:blur(5px);pointer-events:none;z-index:-1;
+}
+
+/* ---------- Mini Sign-out ---------- */
+
+#logout{
+  position:relative;
+  display:block;
+  text-align:right;
+  margin:0.5rem 5vw 2rem auto;
+  font-size:.75rem;
+  color:#888;
+  text-decoration:none;
+  padding:.75rem 1rem;      /* größere Klickfläche */
+}
+
+/* ==================================================================== */
+/* ---------------------- BACKPACK LIST PAGE -------------------------- */
+/* ==================================================================== */
+
+.bpListPage{
+  background:#f7f7f7;            /* heller Rand unten */
+  min-height:100dvh;
+  overflow-x:hidden;
+}
+
+/* --- Header mit Farbverlauf ---------------------------------------- */
+.bpHeader{
+  padding:1rem 1.2rem 2.5rem;
+  background:linear-gradient(180deg,#9eddd4 0%,#c2ebe4 60%,#e0f7f2 100%);
+  position:relative;
+  display:flex;
+  align-items:center;
+  gap:.75rem;
+  color:#fff;
+}
+.bpBack{
+  position:absolute;top:1.2rem;left:1rem;
+  font-size:1.6rem;color:#fff;text-decoration:none;
+}
+.bpIcon{ width:40px;height:40px; }
+.bpHeader h1{ font-size:1.35rem;font-weight:700;margin:0;line-height:1.2; }
+.bpHeader small{ font-size:.78rem;opacity:.9; }
+
+/* --- Titel-Card ----------------------------------------------------- */
+.bpCard{
+  margin:-2rem auto 1rem;            /* überlappt den Header */
+  width:90vw;max-width:430px;
+  background:linear-gradient(180deg,#ffffff 0%,#f8f8f8 100%);
+  border-radius:1rem;
+  box-shadow:0 2px 6px rgba(0,0,0,.08);
+  padding:1rem 0;
+}
+.bpCard h2{
+  text-align:center;font-size:1.05rem;font-weight:700;margin:.5rem 0 1rem;
+}
+.leaf{ font-size:1.3rem;margin:0 .25rem; }
+
+/* --- Einzelne Rucksack-Zeilen -------------------------------------- */
+.bpItem{
+  display:flex;gap:.9rem;
+  padding:.9rem 1rem;
+  background:linear-gradient(180deg,#ffffff 0%,#f3f3f3 100%);
+  cursor:pointer;
+}
+.bpItem+ .bpItem{ border-top:1px solid #e5e5e5; }
+.bpItem img{
+  width:85px;height:85px;border-radius:.25rem;object-fit:cover;
+}
+.bpItem strong{ font-size:1rem;color:#333; }
+.bpItem .label{ font-size:.75rem;font-weight:600;color:#666; }
+
+/* --- Sign-out (bereits bekannt) ------------------------------------ */
+#logout{
+  position:fixed;right:1rem;bottom:1rem;
+  font-size:.75rem;color:#888;text-decoration:none;
+  padding:.75rem 1rem;
+}
+/* bisher –2.2 rem oder –1.4 rem  →  jetzt fast keine Überlappung mehr */
+.card{
+  margin:-0.4rem auto 2rem;     /* nur 4 px in den Header hinein */
+}
+
+
+/* ==================================================================== */
+/* ------------------------- MEMORIES PAGE ---------------------------- */
+/* ==================================================================== */
+
+.memPage{background:#fafafa;min-height:100dvh;}
+
+/* iOS-Status-Bar-Mock */
+.iosBar{display:flex;justify-content:space-between;padding:.4rem 1rem;font-size:.8rem;color:#374;text-shadow:0 1px #fff}
+
+/* Sticky Header */
+.memHeader{
+  position:sticky;top:0;
+  background:#fff;padding:1rem 1rem .5rem;
+  font-size:1.25rem;font-weight:700;text-align:center;
+  border-bottom:1px solid #e4e4e4;z-index:2;
+}
+.memHeader .underline{
+  display:block;width:80px;height:3px;margin:.5rem auto 0;
+  background:#7ad2c1;border-radius:3px;
+}
+
+/* Scroll-Liste */
+.memList{padding:0 1rem 5rem}              /* Platz nach unten für FAB */
+.memRow{
+  display:flex;gap:1rem;padding:1rem 0;cursor:pointer;
+  border-bottom:1px solid #eaeaea;
+}
+.memRow img{
+  width:72px;height:72px;border-radius:.6rem;object-fit:cover;
+}
+.memRow h3{font-size:.95rem;margin:0;font-weight:600}
+.memRow p{font-size:.8rem;margin:.1rem 0;color:#555}
+.memRow time{font-size:.7rem;color:#999}
+
+/* Floating Action Buttons */
+.memFAB{
+  position:fixed;bottom:1.2rem;left:50%;transform:translateX(-50%);
+  display:flex;gap:1.2rem;z-index:3;
+}
+.memFAB a,.memFAB button{
+  padding:.55rem 1.1rem;border-radius:1.3rem;font-size:.8rem;
+  font-weight:600;color:#fff;border:none;cursor:pointer;
+  box-shadow:0 2px 6px rgba(0,0,0,.2);transition:opacity .2s;
+}
+.memFAB a{background:#007aff;}    /* iOS-Blue */
+.memFAB button{background:#009e60;}  /* Add = grün */
+.memFAB a:hover,.memFAB button:hover{opacity:.85}
+
+/* ==================================================================== */
+/* ----------------------- END MEMORIES PAGE -------------------------- */
+/* ==================================================================== */

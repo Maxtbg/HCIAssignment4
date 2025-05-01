@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Memories</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+body{margin:0;font-family:-apple-system,Helvetica}
+.memPage{padding:0;margin:0}
+.memHeader{text-align:center;padding:1.5rem 0 .5rem;font-size:1.5rem;font-weight:600;position:relative}
+.underline{position:absolute;bottom:0;left:25%;width:50%;height:2px;background:#007aff}
+.memList{padding:1rem}
+.memRow{display:flex;gap:1rem;margin-bottom:1.5rem;cursor:pointer;border-radius:.8rem;
+       padding:.8rem;transition:background .2s}
+.memRow:hover{background:#f5f5f5}
+.memRow img{width:80px;height:80px;object-fit:cover;border-radius:.5rem}
+.memRow .text{flex:1}
+.memRow h3{margin:0 0 .5rem}
+.memRow p{margin:0 0 .5rem;opacity:.8}
+.memRow time{font-size:.8rem;opacity:.6}
+.memFAB{position:fixed;bottom:1rem;width:100%;display:flex;justify-content:center;gap:1rem}
+.btnAdd,.btnBack{padding:.75rem 1.8rem;border:none;border-radius:1.6rem;font-weight:600;cursor:pointer}
+.btnAdd{background:#007aff;color:#fff}
+.btnBack{background:#f0f0f0;color:#333;text-decoration:none}
+</style>
+</head>
+<body class="memPage">
+<header class="memHeader">
+  Memories <span class="underline"></span>
+</header>
+<section id="memList" class="memList"></section>
+<div class="memFAB">
+  <a class="btnBack" href="menu.html">Back</a>
+  <button class="btnAdd" onclick="addTrip()">Add</button>
+</div>
+<script>
+/* ---------- Meta-Storage (localStorage) --------------------------- */
+const KEY='trips', PLACE='assets/placeholder.jpg';
+const read = () => JSON.parse(localStorage.getItem(KEY)||'[]');
+const save = arr => localStorage.setItem(KEY,JSON.stringify(arr));
+if(!localStorage.getItem(KEY)) save([]);      // first run
+
+/* ---------- IndexedDB – Promise-API ------------------------------- */
+const dbReady = new Promise(res=>{
+  const r=indexedDB.open('tripPhotos',1);
+  r.onupgradeneeded=e=>e.target.result.createObjectStore('photos');
+  r.onsuccess=()=>res(r.result);
+});
+const getBlob = key => dbReady.then(db=> new Promise((r, reject)=>{
+  try {
+    const tx = db.transaction('photos', 'readonly');
+    const req = tx.objectStore('photos').get(key);
+    
+    req.onsuccess = e => {
+      const result = e.target.result;
+      if (result) {
+        r(result);
+      } else {
+        console.warn("No blob found for key:", key);
+        r(null);
+      }
+    };
+    
+    req.onerror = (e) => {
+      console.error("Error getting blob:", key, e);
+      r(null);
+    };
+    
+    tx.onerror = (e) => {
+      console.error("Transaction error when getting blob:", key, e);
+      r(null);
+    };
+  } catch(e) {
+    console.error("Exception in getBlob:", e);
+    r(null);
+  }
+}));
+
+/* ---------- Liste aufbauen --------------------------------------- */
+async function render(){
+  console.log("Rendering trips list");
+  const root = document.getElementById('memList'); 
+  root.innerHTML = '<p style="text-align:center">Loading trips...</p>';
+  
+  const trips = read();
+  const objectURLs = [];
+  
+  if (trips.length === 0) {
+    root.innerHTML = '<p style="text-align:center;padding:2rem">No trips yet. Add your first trip!</p>';
+    return;
+  }
+  
+  // Create a document fragment for better performance
+  const fragment = document.createDocumentFragment();
+  
+  // First pass: create all rows with placeholder images
+  for(const t of trips){
+    const row = document.createElement('article');
+    row.className = 'memRow';
+    row.dataset.id = t.id;
+    row.onclick = () => location = `memory.html?id=${t.id}`;
+    row.innerHTML = `
+      <img src="${PLACE}" alt="${t.title} cover" style="background:#f0f0f0;">
+      <div class="text">
+        <h3>${t.title}</h3>
+        <p>${t.desc || ''}</p>
+        <time>${t.date || ''}</time>
+      </div>`;
+    fragment.appendChild(row);
+  }
+  
+  // Add all rows to the DOM at once
+  root.innerHTML = '';
+  root.appendChild(fragment);
+  
+  // Second pass: load cover images async
+  for(const t of trips){
+    const row = root.querySelector(`.memRow[data-id="${t.id}"]`);
+    if (!row) continue;
+    
+    const img = row.querySelector('img');
+    if (!img) continue;
+    
+    if (t.cover) {
+      try {
+        console.log("Loading cover for trip:", t.title);
+        const coverBlob = await getBlob(t.cover);
+        
+        if (coverBlob) {
+          const url = URL.createObjectURL(coverBlob);
+          objectURLs.push(url);
+          
+          img.onload = function() {
+            img.style.background = '';
+          };
+          
+          img.onerror = function() {
+            console.error("Cover image failed to load:", t.cover);
+            img.src = PLACE;
+          };
+          
+          img.src = url;
+        }
+      } catch (err) {
+        console.error("Error loading cover image:", err);
+      }
+    }
+  }
+  
+  // Clean up object URLs when navigating away
+  window.addEventListener('beforeunload', function() {
+    objectURLs.forEach(url => URL.revokeObjectURL(url));
+  }, { once: true });
+}
+
+/* ---------- Trip anlegen ----------------------------------------- */
+function addTrip(){
+  const title=prompt('Trip title'); 
+  if(!title) return;
+  
+  const desc =prompt('Short description')||'';
+  const trip={ 
+    id: Date.now().toString(), 
+    title, 
+    desc,
+    date: new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),
+    images: [], 
+    cover: '' 
+  };
+  
+  const all = read(); 
+  all.unshift(trip); 
+  save(all); 
+  render();
+}
+
+/* Init */
+window.addEventListener('DOMContentLoaded', () => {
+  console.log("Memories page loaded");
+  render();
+});
+</script>
+</body></html>
